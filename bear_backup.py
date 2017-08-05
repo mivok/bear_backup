@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+import argparse
+import datetime
 import json
 import os.path
 import pathlib
 import re
 import sqlite3
+import subprocess
 import sys
 import zipfile
 
@@ -16,6 +19,10 @@ filepath = os.path.join(assetpath, "Note Files")
 
 asset_re = re.compile(r'\[(image|file):([^]]+)\]')
 
+# The epoch for apple timestamps in the bear database is 1 Jan 2001, so we
+# need to add the following offset to the timestamps to get a unix timestamp
+apple_epoch = 978307200
+
 class Note(object):
     def __init__(self, db, note_id):
         self.db = db
@@ -27,6 +34,10 @@ class Note(object):
 
     def text(self):
         return self.note_data["ZTEXT"]
+
+    def last_modified(self):
+        return datetime.datetime.fromtimestamp(
+            self.note_data["ZMODIFICATIONDATE"] + apple_epoch)
 
     def text_with_converted_asset_paths(self):
         """Returns the note text, but with any asset paths changed to point to
@@ -63,6 +74,15 @@ class Note(object):
         # Collapse spaces
         filename = re.sub('\s+', ' ', filename)
         return filename
+
+    def existing_file_is_newer(self):
+        filename = pathlib.Path(self.filename()).with_suffix(".bearnote")
+        if not filename.exists():
+            return False
+        mtime = datetime.datetime.fromtimestamp(filename.stat().st_mtime)
+        if mtime < self.last_modified():
+            return False
+        return True
 
     def zip_note(self, filename=None):
         """Adds the note to a zipfile in bearnote format.
@@ -103,9 +123,46 @@ class BearDb(object):
         return notes
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Back up bear notes")
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='print additional messages during backup')
+    parser.add_argument('-d', '--debug', action='store_true',
+                        help="don't back up - bring up a debug console instead")
+    parser.add_argument('-f', '--force', action='store_true',
+                        help="Overwrite existing files even if newer")
+    parser.add_argument('-n', '--notify', action='store_true',
+                        help="Show an OSX notification once backup is complete")
+    parser.add_argument('dirname', metavar='DIRECTORY',
+                        help='directory to back up notes to')
+    args = parser.parse_args()
+
+    if args.verbose:
+        print("Backing up to: %s" % args.dirname)
+
+    # Make sure the directory we are backing up to exists, then cd into it
+    os.makedirs(args.dirname, exist_ok=True)
+    os.chdir(args.dirname)
+
     bear_db = BearDb()
     notes = bear_db.all_notes()
 
+    if args.debug:
+        import code
+        code.interact(banner="Debug console", local=locals())
+        sys.exit(0)
+
     for note in notes:
-        print(note.filename())
+        if not args.force:
+            if note.existing_file_is_newer():
+                continue
+
+        if args.verbose:
+            print(note.filename())
         note.zip_note()
+
+    if args.notify:
+        text = "Backed up notes to %s" % args.dirname
+        title = "Bear notes backup"
+        subprocess.run(["osascript","-e",
+                        "display notification \"%s\" with title \"%s\"" % (
+                            text, title)])
