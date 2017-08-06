@@ -19,21 +19,28 @@ class BearBackup < Formula
         "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
     <plist version="1.0">
         <dict>
-             <key>Label</key>
-             <string>#{plist_name}</string>
-             <key>ProgramArguments</key>
-             <array>
-                 <string>#{HOMEBREW_PREFIX}/bin/bear_backup.py -n ~/Dropbox/backups/bear</string>
-             </array>
-             <key>RunAtLoad</key>
-             <false/>
-             <key>StartCalendarInterval</key>
-                 <dict>
-                 <key>Hour</key>
-                 <integer>0</integer>
-                 <key>Minute</key>
-                 <integer>0</integer>
-             </dict>
+            <key>Label</key>
+            <string>#{plist_name}</string>
+            <key>EnvironmentVariables</key>
+            <dict>
+                <key>PATH</key>
+                <string>/bin:/usr/bin:/usr/local/bin</string>
+            </dict>
+            <key>ProgramArguments</key>
+            <array>
+                <string>#{HOMEBREW_PREFIX}/bin/bear_backup.py</string>
+                <string>-n</string>
+                <string>~/Dropbox/backups/bear</string>
+            </array>
+            <key>RunAtLoad</key>
+            <false/>
+            <key>StartCalendarInterval</key>
+            <dict>
+                <key>Hour</key>
+                <integer>0</integer>
+                <key>Minute</key>
+                <integer>0</integer>
+            </dict>
         </dict>
     </plist>
     EOF
