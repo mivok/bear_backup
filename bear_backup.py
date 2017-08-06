@@ -132,7 +132,7 @@ if __name__ == '__main__':
                         help="Overwrite existing files even if newer")
     parser.add_argument('-n', '--notify', action='store_true',
                         help="Show an OSX notification once backup is complete")
-    parser.add_argument('dirname', metavar='DIRECTORY',
+    parser.add_argument('dirname', metavar='DIRECTORY', type=os.path.expanduser,
                         help='directory to back up notes to')
     args = parser.parse_args()
 
