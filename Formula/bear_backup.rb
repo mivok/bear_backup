@@ -29,7 +29,8 @@ class BearBackup < Formula
             <key>ProgramArguments</key>
             <array>
                 <string>#{HOMEBREW_PREFIX}/bin/bear_backup.py</string>
-                <string>-n</string>
+                <string>--notify</string>
+                <string>--remove</string>
                 <string>~/Dropbox/backups/bear</string>
             </array>
             <key>RunAtLoad</key>

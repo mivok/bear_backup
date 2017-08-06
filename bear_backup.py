@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import datetime
+import glob
 import json
 import os.path
 import pathlib
@@ -68,15 +69,20 @@ class Note(object):
     def filename(self):
         """Generates a filename from the note title, without any file
         extension"""
-        filename = note.title()
+        filename = self.title()
         # Strip anything that isn't alphanumeric or spaces
         filename = re.sub('[^\w\s]+', '_', filename)
         # Collapse spaces
         filename = re.sub('\s+', ' ', filename)
         return filename
 
+    def full_filename(self):
+        """Gets the full filename of the note on disk, including the .bearnote
+        extension"""
+        return pathlib.Path(self.filename()).with_suffix(".bearnote")
+
     def existing_file_is_newer(self):
-        filename = pathlib.Path(self.filename()).with_suffix(".bearnote")
+        filename = self.full_filename()
         if not filename.exists():
             return False
         mtime = datetime.datetime.fromtimestamp(filename.stat().st_mtime)
@@ -130,11 +136,20 @@ if __name__ == '__main__':
                         help="don't back up - bring up a debug console instead")
     parser.add_argument('-f', '--force', action='store_true',
                         help="Overwrite existing files even if newer")
-    parser.add_argument('-n', '--notify', action='store_true',
+    parser.add_argument('-n', '--dry-run', action='store_true',
+                        help="Don't create/delete any files, just print "
+                        "what would happen")
+    parser.add_argument('-o', '--notify', action='store_true',
                         help="Show an OSX notification once backup is complete")
+    parser.add_argument('-r', '--remove', action='store_true',
+                        help="Remove any deleted notes from the backup")
     parser.add_argument('dirname', metavar='DIRECTORY', type=os.path.expanduser,
                         help='directory to back up notes to')
     args = parser.parse_args()
+
+    if args.dry_run:
+        # Dry run implies verbose
+        args.verbose = True
 
     if args.verbose:
         print("Backing up to: %s" % args.dirname)
@@ -156,9 +171,24 @@ if __name__ == '__main__':
             if note.existing_file_is_newer():
                 continue
 
-        if args.verbose:
-            print(note.filename())
-        note.zip_note()
+        if args.dry_run:
+            print("Would back up: %s" % note.filename())
+        else:
+            if args.verbose:
+                print("Backing up: %s" % note.filename())
+            note.zip_note()
+
+    if args.remove:
+        keep_notes = {str(note.full_filename()) for note in notes}
+        all_notes = set(glob.glob("*.bearnote"))
+        delete_notes = all_notes - keep_notes
+        for note in delete_notes:
+            if args.dry_run:
+                print("Would delete: %s" % note)
+            else:
+                if args.verbose:
+                    print("Deleting %s" % note)
+                os.remove(note)
 
     if args.notify:
         text = "Backed up notes to %s" % args.dirname
