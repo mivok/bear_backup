@@ -10,6 +10,7 @@ import sqlite3
 import subprocess
 import sys
 import zipfile
+import random
 
 # Paths to various files
 approot = os.path.expanduser("~/Library/Containers/net.shinyfrog.bear/Data")
@@ -23,15 +24,30 @@ asset_re = re.compile(r'\[(image|file):([^]]+)\]')
 # The epoch for apple timestamps in the bear database is 1 Jan 2001, so we
 # need to add the following offset to the timestamps to get a unix timestamp
 apple_epoch = 978307200
+# 255 is the max len for a filename on most OSes, including macOS - 9 for the suffix
+max_filename_length = 246
 
 class Note(object):
-    def __init__(self, db, note_id):
+    def __init__(self, db, note_id, count): # count is the total number of notes, for calculating the random number
         self.db = db
+        self.count = count
         self.note_data = self.db.execute("SELECT * FROM ZSFNOTE WHERE Z_PK=?",
                                     (note_id,)).fetchone()
 
     def title(self):
-        return self.note_data["ZTITLE"]
+
+        # make sure we have a title
+        if self.note_data["ZTITLE"]:
+            # and it's less than 246 in length
+            if  len(self.note_data["ZTITLE"]) < max_filename_length:
+                return self.note_data["ZTITLE"]
+            else:
+                # otherwise take substring from the start, for 246 chars
+                return self.note_data["ZTITLE"][:max_filename_length]
+        else:
+            # if we don't have a title, make one up and add a random number
+            ran = random.randint(1, self.count)
+            return str("Unknown-%i" % ran)
 
     def text(self):
         return self.note_data["ZTEXT"]
@@ -125,7 +141,9 @@ class BearDb(object):
     def all_notes(self):
         ids = self.db.execute(
             "SELECT Z_PK FROM ZSFNOTE WHERE ZTRASHED != 1").fetchall()
-        notes = [Note(self.db, i["Z_PK"]) for i in ids]
+        numNotes = len(ids)
+         
+        notes = [Note(self.db, i["Z_PK"], numNotes) for i in ids]
         return notes
 
 if __name__ == '__main__':
@@ -160,6 +178,15 @@ if __name__ == '__main__':
 
     bear_db = BearDb()
     notes = bear_db.all_notes()
+
+    # delete old unknown, it would make a dupe
+    unk_notes = set(glob.glob("Unknown_*.bearnote"))
+
+    for note in unk_notes:
+        if re.match(r"Unknown_\d+.bearnote", note):
+            if args.verbose:
+                print("Deleting old notw with no title: %s" % note)
+            os.remove(note)
 
     if args.debug:
         import code
