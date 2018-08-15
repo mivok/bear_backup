@@ -1,7 +1,7 @@
 class BearBackup < Formula
   desc "Bear backup utility"
   homepage "https://github.com/mivok/bear_backup"
-  head "git@github.com:mivok/bear_backup", :using => :git
+  head "https://github.com/mivok/bear_backup.git", :using => :git
 
   depends_on "python3"
 
@@ -13,7 +13,7 @@ class BearBackup < Formula
   plist_options :manual => "bear_backup"
 
   def plist
-    <<-EOF.undent
+    <<~EOS
     <?xml version="1.0" encoding="UTF-8"?>
     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
         "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -44,7 +44,7 @@ class BearBackup < Formula
             </dict>
         </dict>
     </plist>
-    EOF
+    EOS
   end
 
   test do
