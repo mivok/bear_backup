@@ -12,9 +12,9 @@ import sys
 import zipfile
 
 # Paths to various files
-approot = os.path.expanduser("~/Library/Containers/net.shinyfrog.bear/Data")
-dbpath = os.path.join(approot, "Documents/Application Data/database.sqlite")
-assetpath = os.path.join(approot, "Documents/Application Data/Local Files")
+approot = os.path.expanduser("~/Library/Group Containers/9K33E3U3T4.net.shinyfrog.bear")
+dbpath = os.path.join(approot, "Application Data/database.sqlite")
+assetpath = os.path.join(approot, "Application Data/Local Files")
 imagepath = os.path.join(assetpath, "Note Images")
 filepath = os.path.join(assetpath, "Note Files")
 
